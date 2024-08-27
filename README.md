@@ -25,7 +25,7 @@ Welcome to the Airbnb-like Property Listings website name Wanderlust! This proje
 1. **Clone the Repository:**
 
    ```bash
-   git clone https://github.com/yourusername/Project_Wanderlust.git
+   git clone https://github.com/SajalDBansal/Project_Wanderlust.git
    cd Project_Wanderlust
    ```
 
