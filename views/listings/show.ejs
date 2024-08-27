@@ -1,0 +1,50 @@
+<%= layout("/layouts/boilerplate.ejs")%>
+
+<!-- Showe page to show the data about ther selected listing -->
+
+<div class="row mt-3">
+  <div class="col-md-8 offset-3">
+    <h3>Listing Details</h3>
+  </div>
+
+  <div class="card col-7 offset-3 mt-3 show-card">
+    <img
+      src="<%=listing.image%>"
+      class="card-img-top show-img"
+      alt="listing-img"
+    />
+
+    <div class="card-body mt-3">
+      <h5 class="card-title"><%= listing.title%></h5>
+      <br />
+      <p class="card-text"><%=listing.description%></p>
+      <br />
+      <p class="card-text">
+        Price : &#8377; <%=listing.price.toLocaleString("en-IN")%>
+      </p>
+      <br />
+      <p class="card-text">Location : <%=listing.location%></p>
+      <br />
+      <p class="card-text">Country : <%=listing.country%></p>
+      <br />
+    </div>
+
+    <div class="row">
+      <form action="/listings/<%=listing._id%>/edit" class="mt-3 col-md-4">
+        <button class="btn btn-primary show-btn form-btn">Edit</button>
+      </form>
+
+      <form
+        method="post"
+        action="/listings/<%=listing._id%>?_method=DELETE"
+        class="mt-3 col-md-4"
+      >
+        <button class="btn btn-dark show-btn">Delete Listing</button>
+      </form>
+
+      <form action="/listings" class="mt-3 col-md-4">
+        <button class="btn btn-primary show-btn form-btn">Back</button>
+      </form>
+    </div>
+  </div>
+</div>
