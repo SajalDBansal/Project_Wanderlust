@@ -42,6 +42,7 @@ const ExpressError = require("./utils/ExpressError.js");
 const { listingSchema } = require("./shema.js");
 
 // ValidateLising function to validate listing using joi
+// This handles the server side error occured in the listing Schema
 const validateListing = (req, res, next) => {
   let { error } = listingSchema.validate(req.body);
   if (error) {
@@ -86,7 +87,7 @@ app.get(
   "/listings",
   wrapAsync(async (req, res) => {
     const allListings = await Listing.find({});
-    console.log(allListings);
+    // console.log(allListings);
     res.render("listings/index.ejs", { allListings });
   })
 );
@@ -160,11 +161,9 @@ app.all("*", (req, res, next) => {
   next(new ExpressError(404, "PAGE NOT FOUND !"));
 });
 
-// Error Handling
+// Custom Error Handling
 app.use((err, req, res, next) => {
+  // Assigning basic status code and message if not provided in error
   let { statusCode = 500, message = "SOMETHING WENT WRONG!" } = err;
   res.status(statusCode).render("error.ejs", { err });
-  // res.status(statusCode).send(message);
-  // res.send("Something went wrong!");
 });
-// hello
