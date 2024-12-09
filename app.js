@@ -12,7 +12,7 @@ async function main() {
 main()
   .then(() => console.log("Connected to DB"))
   .catch((err) => console.log(err));
-const Listing = require("./model/listing.js");
+const User = require("./model/user.js");
 
 // Requiring ejs
 const path = require("path");
@@ -32,129 +32,70 @@ app.use(methodOverride("_method"));
 const ejsMate = require("ejs-mate");
 app.engine("ejs", ejsMate);
 
-// Requiring wrapAsync function for error handling
-const wrapAsync = require("./utils/wrapAsync.js");
+// Requiring express sessions for user sessions
+const session = require("express-session");
+
+// Requiring connect flash to show flash data
+const flash = require("connect-flash");
+
+// Requiring passport & its variable npm packages
+const passport = require("passport");
+const LocalStrategy = require("passport-local");
 
 // Requiring ExpressError class to handle custom errors
 const ExpressError = require("./utils/ExpressError.js");
 
-// Requiring listing schema to validate scehma
-const { listingSchema } = require("./shema.js");
+// Requiring routes from router folder using express Router
+const listingRouter = require("./routes/listing.js");
+const reviewRouter = require("./routes/review.js");
+const userRouter = require("./routes/user.js");
 
-// ValidateLising function to validate listing using joi
-// This handles the server side error occured in the listing Schema
-const validateListing = (req, res, next) => {
-  let { error } = listingSchema.validate(req.body);
-  if (error) {
-    let errMsg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(400, errMsg);
-  } else {
-    next();
-  }
+// Setting up session options to create session instance
+const sessionOptions = {
+  secret: "mysupersecretcode",
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+    manAge: 7 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+  },
 };
-
-// App Routes listening
-app.listen(port, (req, res) => {
-  console.log(`App listen to port ${port}`);
-});
 
 // Root route
 app.get("/", (req, res) => {
   res.send("Hi, I am root");
 });
 
-/* // Testing the Database Listing model
-app.get("/testListing", async (req, res) => {
-    let sampleListing = new Listing({
-        title: "My New Villa",
-        description: "By the beach",
-        price: 1200,
-        location: "Calangute, Goa",
-        country: "India"
-    });
+// Using session to create cookies & flash to flash data on screen
+app.use(session(sessionOptions));
+app.use(flash());
 
-    await sampleListing.save();
-    console.log("Sample saved");
-    res.send("Successful testing")
-});
-*/
+// Using passport for authentication
+app.use(passport.initialize());
+app.use(passport.session());
 
-// CRUD operations
+// Using passport for authentication strategy
+passport.use(new LocalStrategy(User.authenticate()));
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
 
-// Read Route
-// "/listing" - get request to show all listings
-app.get(
-  "/listings",
-  wrapAsync(async (req, res) => {
-    const allListings = await Listing.find({});
-    // console.log(allListings);
-    res.render("listings/index.ejs", { allListings });
-  })
-);
-
-// New Route
-// "/listings/new" - get request to get form to create a new entry
-app.get("/listings/new", (req, res) => {
-  res.render("listings/new.ejs");
+// Flash connecting middleware
+app.use((req, res, next) => {
+  res.locals.success = req.flash("success");
+  res.locals.error = req.flash("error");
+  res.locals.currUser = req.user;
+  next();
 });
 
-// Show Route
-// /listings/:id - get request to show a specific listing
-app.get(
-  "/listings/:id",
-  wrapAsync(async (req, res) => {
-    const { id } = req.params;
-    const listing = await Listing.findById(id);
-    res.render("listings/show.ejs", { listing });
-  })
-);
+// Adding listing routes from /routes/listing.js
+app.use("/listings", listingRouter);
 
-// Create routes
-// "/listings" - post request to post the from data to create data
-app.post(
-  "/listings",
-  validateListing,
-  wrapAsync(async (req, res, next) => {
-    const newListing = new Listing(req.body.listing);
-    await newListing.save();
-    res.redirect("/listings");
-  })
-);
+// Adding review routes from /routes/review.js
+app.use("/listings/:id/reviews", reviewRouter);
 
-// Edit Route
-// "/listings/:id/edit" - get request to get the update form of data
-app.get(
-  "/listings/:id/edit",
-  wrapAsync(async (req, res) => {
-    const { id } = req.params;
-    const listing = await Listing.findById(id);
-    res.render("listings/edit.ejs", { listing });
-  })
-);
-
-// Update Route
-// "/listings/:id" - put request to update the data in the database
-app.put(
-  "/listings/:id",
-  validateListing,
-  wrapAsync(async (req, res) => {
-    const { id } = req.params;
-    await Listing.findByIdAndUpdate(id, { ...req.body.listing });
-    res.redirect(`/listings/${id}`);
-  })
-);
-
-// Delete Route
-//  "/listings/:id" - delete request to delete the data from DB
-app.delete(
-  "/listings/:id",
-  wrapAsync(async (req, res) => {
-    const { id } = req.params;
-    let deleteListing = await Listing.findByIdAndDelete(id);
-    console.log(deleteListing);
-    res.redirect(`/listings`);
-  })
-);
+// Adding user routes from /routes/user.js
+app.use("/", userRouter);
 
 // Error on each routes not defined
 app.all("*", (req, res, next) => {
@@ -166,4 +107,9 @@ app.use((err, req, res, next) => {
   // Assigning basic status code and message if not provided in error
   let { statusCode = 500, message = "SOMETHING WENT WRONG!" } = err;
   res.status(statusCode).render("error.ejs", { err });
+});
+
+// App Routes listening
+app.listen(port, (req, res) => {
+  console.log(`App listen to port ${port}`);
 });
