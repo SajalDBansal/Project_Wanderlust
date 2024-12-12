@@ -1,3 +1,9 @@
+// Requiring only i developement phase
+// Requiring dotenv to access data from .env file
+if (process.env.NODE_ENV != "production") {
+  require("dotenv").config();
+}
+
 // Requiring and setting up express
 const express = require("express");
 const app = express();
@@ -5,9 +11,9 @@ const port = 3000;
 
 // Requiring and setting up mongoose
 const mongoose = require("mongoose");
-const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
+const DB_URL = process.env.ATLASDB_URL;
 async function main() {
-  await mongoose.connect(MONGO_URL);
+  await mongoose.connect(DB_URL);
 }
 main()
   .then(() => console.log("Connected to DB"))
@@ -34,6 +40,7 @@ app.engine("ejs", ejsMate);
 
 // Requiring express sessions for user sessions
 const session = require("express-session");
+const MongoStore = require("connect-mongo");
 
 // Requiring connect flash to show flash data
 const flash = require("connect-flash");
@@ -51,8 +58,21 @@ const reviewRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
 
 // Setting up session options to create session instance
+const store = MongoStore.create({
+  mongoUrl: DB_URL,
+  crypto: {
+    secret: process.env.SECRET,
+  },
+  touchAfter: 24 * 3600,
+});
+
+store.on("error", (err) => {
+  console.log("ERROR in MONGO SESSION STORE ", err);
+});
+
 const sessionOptions = {
-  secret: "mysupersecretcode",
+  store,
+  secret: process.env.SECRET,
   resave: false,
   saveUninitialized: true,
   cookie: {
@@ -61,11 +81,6 @@ const sessionOptions = {
     httpOnly: true,
   },
 };
-
-// Root route
-app.get("/", (req, res) => {
-  res.send("Hi, I am root");
-});
 
 // Using session to create cookies & flash to flash data on screen
 app.use(session(sessionOptions));
